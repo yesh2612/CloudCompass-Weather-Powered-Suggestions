@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Info & Weather</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>City Info & Weather</h1>
+        <form id="cityForm">
+            <input type="text" name="city" id="city" placeholder="Enter city name" required>
+            <button type="submit">Get Info</button>
+        </form>
+        <div id="result"></div>
+        <div id="recommendations"></div>
+    </div>
+
+    <script>
+        document.getElementById("cityForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const city = document.getElementById("city").value;
+            const resultDiv = document.getElementById("result");
+            const recommendationsDiv = document.getElementById("recommendations");
+            resultDiv.innerHTML = "Loading...";
+            recommendationsDiv.innerHTML = "";
+
+            try {
+                const response = await fetch("/get_city_info", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams({ city }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update the result section with weather and city info
+                    resultDiv.innerHTML = `
+                        <h2>Weather in ${data.city}</h2>
+                        <p>Temperature: ${data.weather.temperature}°C</p>
+                        <p>Condition: ${data.weather.condition}</p>
+                        <h3>About ${data.city}</h3>
+                        <p>${data.city_info}</p>
+                    `;
+
+                    // Display recommendations or a fallback message
+                    if (data.recommended_places && data.recommended_places.length > 0) {
+                        recommendationsDiv.innerHTML = `
+                            <h3>Recommended Places to Visit</h3>
+                            <ul>
+                                ${data.recommended_places.map(place => `
+                                    <li>
+                                        <strong>${place.name}</strong> (${place.rating} stars, ${place.user_ratings_total} reviews)
+                                        <br>${place.address}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        `;
+                    } else {
+                        // If no places to recommend
+                        recommendationsDiv.innerHTML = `<p>${data.recommendation_message || "There are no tourist places to recommend."}</p>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                resultDiv.innerHTML = `<p>Error: Unable to fetch data</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
+
